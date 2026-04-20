@@ -5,6 +5,7 @@
   "type": "module",
   "main": "./dist/visual-controller-for-preact.cjs",
   "module": "./dist/visual-controller-for-preact.esm.mjs",
+  "types": "./dist/main.d.ts",
   "exports": {
     ".": {
       "import": "./dist/visual-controller-for-preact.esm.mjs",
@@ -17,7 +18,8 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && npm run types",
+    "types": "tsc -p tsconfig.types.json",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -43,6 +45,7 @@
     "jsdom": "^26.0.0",
     "preact": "^10.29.1",
     "preact-render-to-string": "^6.6.7",
+    "typescript": "^6.0.3",
     "vite": "^8.0.4",
     "vitest": "^3.0.0"
   }
