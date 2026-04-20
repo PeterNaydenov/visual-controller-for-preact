@@ -8,6 +8,7 @@
     "rootDir": "src",
     "strict": false,
     "noImplicitAny": false,
+    "noImplicitThis": false,
     "noImplicitReturns": false,
     "esModuleInterop": true,
     "skipLibCheck": true,

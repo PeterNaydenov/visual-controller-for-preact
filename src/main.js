@@ -52,14 +52,14 @@ import askForPromise from 'ask-for-promise'
  * @returns {VisualControllerAPI} - Object with methods: publish, destroy, getApp, has
  */
 function VisualController ( dependencies = {} ) {
-        const 
-                  cache = {}  /** @type {Object.<string, function>} */
-                , updateInterface = {}  /** @type {Object.<string, UpdateMethods>} */
-                ;
+        /** @type {Object.<string, any>} */
+        const cache = {}  
+        /** @type {Object.<string, UpdateMethods>} */
+        const updateInterface = {}
 
     /**
      * Publish a Preact app
-     * @param {Function|Object} component - Preact component function or VNode
+     * @param {any} component - Preact component
      * @param {Object} [data] - Data for the Preact component
      * @param {string} id - Id of the container
      * @returns {Promise<UpdateMethods>|boolean}
