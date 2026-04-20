@@ -42,7 +42,7 @@
   "devDependencies": {
     "@preact/preset-vite": "^2.10.5",
     "@vitest/coverage-v8": "^4.1.4",
-    "jsdom": "^29.0.0",
+    "jsdom": "^29.0.2",
     "preact": "^10.29.1",
     "preact-render-to-string": "^6.6.7",
     "typescript": "^6.0.3",
