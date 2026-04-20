@@ -23,7 +23,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "coverage": "vitest --coverage"
+    "cover": "vitest --coverage"
   },
   "keywords": [
     "preact",
