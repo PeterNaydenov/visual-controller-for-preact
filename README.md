@@ -162,6 +162,7 @@ Visual Controller has versions for few other front-end frameworks:
 - [React](https://github.com/PeterNaydenov/visual-controller-for-react)
 - [Svelte 5](https://github.com/PeterNaydenov/visual-controller-for-svelte5)
 - [Solid](https://github.com/PeterNaydenov/visual-controller-for-solid)
+- [Lit](https://github.com/PeterNaydenov/visual-controller-for-lit)
 - [Vue 2](https://github.com/PeterNaydenov/visual-controller-for-vue)
 - [Svelte 3 and 4](https://github.com/PeterNaydenov/visual-controller-for-svelte3)
 
