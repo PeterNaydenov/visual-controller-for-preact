@@ -34,7 +34,7 @@
   "author": "Peter Naydenov",
   "license": "MIT",
   "dependencies": {
-    "ask-for-promise": "^3.1.0"
+    "ask-for-promise": "^3.1.1"
   },
   "peerDependencies": {
     "preact": ">=10.0.0"
