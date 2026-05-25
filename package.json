@@ -1,6 +1,6 @@
 {
   "name": "@peter.naydenov/visual-controller-for-preact",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Visual Controller for Preact - Control multiple Preact apps with a single controller",
   "type": "module",
   "main": "./dist/visual-controller-for-preact.cjs",
