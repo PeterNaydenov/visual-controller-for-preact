@@ -1,25 +1,15 @@
-export default VisualController;
-/**
- * Configuration options for VisualController
- */
 export type VisualControllerOptions = {
     /**
      * - Object with dependencies that should be available for all components
      */
     dependencies?: any;
 };
-/**
- * Methods exposed for external component control
- */
 export type UpdateMethods = {
     /**
      * : string] - Any method registered via setupUpdates
      */
     methodName?: Function;
 };
-/**
- * Props passed to Preact components
- */
 export type PreactComponentProps = {
     /**
      * - Dependencies provided during VisualController initialization
@@ -34,9 +24,6 @@ export type PreactComponentProps = {
      */
     setupUpdates: Function;
 };
-/**
- * VisualController return object
- */
 export type VisualControllerAPI = {
     /**
      * - Publish a Preact app
@@ -86,3 +73,4 @@ export type VisualControllerAPI = {
  * @returns {VisualControllerAPI} - Object with methods: publish, destroy, getApp, has
  */
 declare function VisualController(dependencies?: any): VisualControllerAPI;
+export default VisualController;
