@@ -21,9 +21,9 @@
     "build": "vite build && npm run types",
     "types": "tsc -p tsconfig.types.json",
     "preview": "vite preview",
-    "test": "vitest",
+    "test": "vitest run",
     "test:ui": "vitest --ui",
-    "cover": "vitest --coverage"
+    "cover": "vitest run --coverage"
   },
   "keywords": [
     "preact",
@@ -34,7 +34,7 @@
   "author": "Peter Naydenov",
   "license": "MIT",
   "dependencies": {
-    "ask-for-promise": "^3.1.1"
+    "ask-for-promise": "^3.2.0"
   },
   "peerDependencies": {
     "preact": ">=10.0.0"
@@ -44,7 +44,6 @@
     "@vitest/coverage-v8": "^4.1.10",
     "jsdom": "^29.1.1",
     "preact": "^10.29.7",
-    "preact-render-to-string": "^6.7.0",
     "typescript": "^7.0.2",
     "vite": "^8.1.5",
     "vitest": "^4.1.10"
