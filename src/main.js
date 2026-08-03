@@ -1,169 +1,235 @@
 "use strict"
 /**
- *  Visual Controller for Preact
- *  Control multiple Preact apps with a single controller.
- * 
- *  History notes:
- *   - Development started on April 20th, 2026
- *   - Published on GitHub for first time: April 20th, 2026
+ *  Visual Controller for Preact — v3.0.0
+ *  A thin lifecycle bridge between the inlined dim subset (see `./dim.js`)
+ *  and Preact 10/11. Define regions with invisible markers via `set`,
+ *  then mount Preact apps into those regions via `publish`. `destroy`
+ *  empties a region without removing the markers, so the same alias
+ *  can host a different app later.
+ *
+ *  @packageDocumentation
  */
-
-
 
 import { render, hydrate, h } from 'preact'
 import askForPromise from 'ask-for-promise'
-
+import dim from './dim.js'
 
 
 /**
- * Configuration options for VisualController
- * @typedef {Object} VisualControllerOptions
- * @property {Object} [dependencies] - Object with dependencies that should be available for all components
+ *  Callback that places dim markers into the DOM.
+ *  @callback SetCallback
+ *  @param {{ start: Text, end: Text }} markers
+ *  @returns {string | void}
  */
 
 /**
- * Methods exposed for external component control
- * @typedef {Object} UpdateMethods
- * @property {Function} [methodName: string] - Any method registered via setupUpdates
+ *  Object passed to `setupUpdates` from inside a published component.
+ *  @typedef {Object} SetupUpdates
  */
 
 /**
- * Props passed to Preact components
- * @typedef {Object} PreactComponentProps
- * @property {Object} dependencies - Dependencies provided during VisualController initialization
- * @property {Object} data - Data passed as second argument to publish
- * @property {Function} setupUpdates - Function to register external update methods
- */
-
-/**
- * VisualController return object
- * @typedef {Object} VisualControllerAPI
- * @property {Function} publish - Publish a Preact app
- * @property {Function} destroy - Destroy a Preact app
- * @property {Function} getApp - Get app update methods
- * @property {Function} has - Check if app exists
+ *  Controller instance returned by `VisualController`.
+ *  @typedef {Object} VisualControllerInstance
+ *  @property {SetCallback & ((fn: SetCallback, ...args: any[]) => void)} set
+ *  @property {(alias: string, component: any, data?: object, extraParams?: object) => Promise<SetupUpdates | false>} publish
+ *  @property {(target?: string | string[]) => boolean | number} destroy
+ *  @property {(alias: string) => boolean} has
+ *  @property {(alias: string) => SetupUpdates | false} getApp
+ *  @property {(alias: string) => boolean | undefined} isEmpty
+ *  @property {() => string[]} list
+ *  @property {() => void} reset
  */
 
 
-
 /**
- * Visual Controller for Preact
- * @param {Object} [dependencies={}] - Dependencies that should be available for all components
- * @returns {VisualControllerAPI} - Object with methods: publish, destroy, getApp, has
+ *  Visual Controller for Preact
+ *  @param {Object} [dependencies={}]
+ *  @returns {VisualControllerInstance}
  */
 function VisualController ( dependencies = {} ) {
-        /** @type {Object.<string, any>} */
-        const cache = {}  
-        /** @type {Object.<string, UpdateMethods>} */
-        const updateInterface = {}
-
-    /**
-     * Publish a Preact app
-     * @param {any} component - Preact component
-     * @param {Object} [data] - Data for the Preact component
-     * @param {string} id - Id of the container
-     * @returns {Promise<UpdateMethods>|boolean}
-     */
-    function publish  (component, data = {}, id) {
-                const hasKey = cache[id] ? true : false;
-                let   node;
-                
-                if ( !component ) {
-                        console.error ( `Error: Component is undefined` )
-                        return false
-                   }
-                if ( hasKey )   destroy ( id )
-                node = document.getElementById ( id )
-                if ( !node ) {  
-                            console.error ( `Can't find node with id: "${id}"`)
-                            return false
-                    }
-
-                updateInterface[id] = {}
-                let dispose;
-                const
-                      loadTask = askForPromise ()
-                    , endTask  = askForPromise ()
-                    , setupUpdates = lib =>  updateInterface[id] = lib
-                    , props = { dependencies, data, setupUpdates }
-                    ;
-
-                cache[id] = {}  // Mark as published immediately for has() to work
-
-                if ( node.innerHTML.trim () ) {   // Hydrate SSR result
-                            hydrate ( h(component, props), node )
-                    }
-                else {   // Start a new Preact App
-                            render ( h(component, props), node )
-                    }
-                
-                setTimeout(() => loadTask.done(), 0)
-
-                loadTask.onComplete ( () => endTask.done ( updateInterface[id])   )
-                return endTask.promise
-            } // publish func.
+    /** @type {Object.<string, { app: any, mountSpan: HTMLElement, setupUpdates: SetupUpdates }>} */
+    const cache = {}
+    /** @type {Set<string>} */
+    const aliases = new Set()
+    /** @type {Object.<string, { start: Text, end: Text }>} */
+    const markersMap = {}
+    /** @type {ReturnType<typeof dim>} */
+    const d = dim()
 
 
-
-    /**
-     * Destroy a Preact app
-     * @param {string} id - Id of the container
-     * @returns {boolean}
-     */
-    function destroy (id) {
-                const htmlKeys = Object.keys(cache);
-                if ( htmlKeys.includes(id) ) {                    
-                        let node = document.getElementById ( id );
-                        if ( node ) {
-                                render ( null, node );
-                                node.innerHTML = '';
-                            }
-                        delete cache[id]
-                        delete updateInterface[id]
-                        return true
-                    }
-                else    return false
-            } // destroy func.
+    function set ( fn, ...args ) {
+        let capturedAlias = null
+        let capturedMarkers = null
+        d.set ( ( markers, ...rest ) => {
+            capturedMarkers = markers
+            const ret = fn ( markers, ...rest )
+            if ( typeof ret === 'string' )   capturedAlias = ret
+            return ret
+        }, ...args )
+        if ( capturedAlias ) {
+            aliases.add ( capturedAlias )
+            markersMap[capturedAlias] = capturedMarkers
+        }
+    }
 
 
-            
-    /**
-     * Get app update methods
-     * @param {string} id - Id of the container
-     * @returns {UpdateMethods|false}
-     */
-    function getApp (id) {
-                const item = updateInterface[id];
-                if ( !item ) {  
-                        console.error ( `App with id: "${id}" was not found.`)
-                        return false
-                    }
-                return item
-        } // getApp func.
+    function publish ( alias, component, data = {}, extraParams = {} ) {
+        const endTask = askForPromise ()
+        void extraParams
+
+        if ( !component ) {
+            console.error ( `Error: Component is undefined` )
+            endTask.done ( false )
+            return endTask.promise
+        }
+        if ( !alias || typeof alias !== 'string' ) {
+            console.error ( `Error: Alias is missing or invalid` )
+            endTask.done ( false )
+            return endTask.promise
+        }
+
+        const markers = markersMap[alias]
+        if ( !markers || !markers.start.isConnected || !markers.end.isConnected ) {
+            console.error ( `Error: Region "${alias}" was not defined or its markers are orphaned. Call html.set(...) first.` )
+            endTask.done ( false )
+            return endTask.promise
+        }
+
+        if ( cache[alias] )   destroy ( alias )
+
+        const between = []
+        let n = markers.start.nextSibling
+        while ( n && n !== markers.end ) { between.push ( n ); n = n.nextSibling }
+
+        /** @type {HTMLElement} */
+        let mountTarget
+        let useSSR = false
+
+        if ( between.length === 0 ) {
+            mountTarget = document.createElement ( 'span' )
+            mountTarget.style.display = 'contents'
+            markers.end.parentNode.insertBefore ( mountTarget, markers.end )
+            useSSR = false
+        } else if ( between.length === 1 && between[0].nodeType === 1 ) {
+            mountTarget = /** @type {HTMLElement} */ (between[0])
+            useSSR = true
+        } else {
+            const wrapper = document.createElement ( 'span' )
+            wrapper.style.display = 'contents'
+            markers.end.parentNode.insertBefore ( wrapper, markers.end )
+            between.forEach ( node => wrapper.appendChild ( node ) )
+            mountTarget = wrapper
+            useSSR = true
+        }
+
+        const entry = { app: null, mountSpan: mountTarget, setupUpdates: {} }
+        cache[alias] = entry
+
+        const setupUpdates = lib => { entry.setupUpdates = lib }
+        const props = { dependencies, data, setupUpdates }
+
+        const loadTask = askForPromise ()
+
+        if ( useSSR ) {
+            hydrate ( h(component, props), mountTarget )
+        } else {
+            render ( h(component, props), mountTarget )
+        }
+        setTimeout ( () => loadTask.done (), 0 )
+
+        loadTask.onComplete ( () => endTask.done ( entry.setupUpdates ) )
+        return endTask.promise
+    }
 
 
-    
-    /**
-     * Check if app exists
-     * @param {string} id - Id of the container
-     * @returns {boolean}
-     */
-    function has ( id ) {
-                return cache[id] ? true : false
-        } // has func.
+    function destroy ( target ) {
+        if ( target === undefined ) {
+            let count = 0
+            for ( const a of Object.keys ( cache ) ) {
+                destroy ( a )
+                count++
+            }
+            return count
+        }
+        if ( Array.isArray ( target ) ) {
+            let count = 0
+            for ( const a of target ) {
+                if ( typeof a === 'string' && cache[a] ) {
+                    destroy ( a )
+                    count++
+                }
+            }
+            return count
+        }
+        if ( typeof target !== 'string' ) {
+            console.error ( `Error: destroy() expects a string alias or an array of strings` )
+            return false
+        }
+        const entry = cache[target]
+        if ( !entry )   return false
+        render ( null, entry.mountSpan )
+        if ( entry.mountSpan.parentNode ) {
+            entry.mountSpan.parentNode.removeChild ( entry.mountSpan )
+        }
+        delete cache[target]
+        return true
+    }
 
+
+    function has ( alias ) {
+        return Boolean ( cache[alias] )
+    }
+
+
+    function getApp ( alias ) {
+        const entry = cache[alias]
+        if ( !entry ) {
+            console.error ( `App with alias: "${alias}" was not found.` )
+            return false
+        }
+        return entry.setupUpdates
+    }
+
+
+    function list () {
+        return Array.from ( aliases )
+    }
+
+
+    function isEmpty ( alias ) {
+        if ( !alias || typeof alias !== 'string' ) {
+            console.error ( `Error: Alias is missing or invalid` )
+            return undefined
+        }
+        const range = d.get ( alias )
+        if ( !range ) {
+            console.error ( `Region "${alias}" was not defined. Call html.set(...) first.` )
+            return undefined
+        }
+        return range.isEmpty ()
+    }
+
+
+    function reset () {
+        for ( const alias of Object.keys ( cache ) )   destroy ( alias )
+        aliases.clear ()
+        for ( const alias of Object.keys ( markersMap ) )   delete markersMap[alias]
+        d.reset ()
+    }
 
 
     return {
-                  publish
-                , destroy 
-                , getApp  
-                , has
-            }
+          set
+        , publish
+        , destroy
+        , has
+        , getApp
+        , isEmpty
+        , list
+        , reset
+    }
 } // visualController
 
 
 
 export default VisualController
-
-
