@@ -1,172 +1,186 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { h, render, hydrate } from 'preact'
+import { h } from 'preact'
 import { JSDOM } from 'jsdom'
 import VisualController from '../src/main.js'
 import App from './App.jsx'
 
-
-
-const dom = new JSDOM('<!DOCTYPE html><html><body><div id="root"></div></body></html>')
+const dom = new JSDOM('<!DOCTYPE html><html><body><main id="main"></main></body></html>')
 global.document = dom.window.document
 global.window = dom.window
 global.navigator = dom.window.navigator
 
 
-
-describe ( 'VisualController for Preact', () => {
-
-  let containerId = 'test-container'
-
-  beforeEach (() => {
-    document.body.innerHTML = `<div id="${containerId}"></div>`
-  })
-
-
-  it ( 'Method "publish" returns a promise', () => { 
-    const vc = new VisualController()
-    const result = vc.publish (App, {}, containerId)
-    expect (result.constructor.name).toBe ('Promise')
-    vc.destroy (containerId)
-  })
-
-
-  it ( 'Publish component to a container', async () => {
-    const vc = new VisualController()
-    const promise = vc.publish (App, { greeting: 'test message' }, containerId)
-    const updates = await promise
-    expect (updates).toBeDefined ()
-    expect (typeof updates).toBe ('object')
-    const node = document.getElementById (containerId)
-    expect (node.innerHTML).not.toBe ('')
-    vc.destroy (containerId)
-  })
-
-
-  it ( 'Replaces existing component without calling destroy', async () => {
-    const vc = new VisualController()
-
-    await vc.publish (App, {}, containerId)
-    const node = document.getElementById (containerId)
-    const firstContent = node.innerHTML
-
-    await vc.publish (App, {}, containerId)
-    expect (node.innerHTML).not.toBe ('')
-    vc.destroy (containerId)
-  })
-
-
-  it ( 'Destroy', async () => {
-    const vc = new VisualController()
-    const node = document.getElementById (containerId)
-    await vc.publish (App, {}, containerId)
-    expect (node.innerHTML).not.toBe ('')
-
-    const destroyed = vc.destroy (containerId)
-    expect (destroyed).toBe (true)
-    expect (node.innerHTML).toBe ('')
-  })
-
-
-  it ( 'Fail to destroy non-existent app', () => {
-    const vc = new VisualController()
-
-    const result = vc.destroy ('non-existent-app')
-    expect (result).toBe (false)
-  })
-
-
-  it ( 'Method "has"', async () => {
-    const vc = new VisualController()
-    await vc.publish (App, {}, containerId)
-    const exists = vc.has (containerId)
-    vc.destroy (containerId)
-    const missing = vc.has (containerId)
-    expect (exists).toBe (true)
-    expect (missing).toBe (false)
-  })
-
-
-  it ( 'Test for non-existent app', () => {
-    const vc = new VisualController()
-
-    expect (vc.has ('non-existent')).toBe (false)
-  })
-
-
-  it ( 'Updates a published app', async () => {
-    const vc = new VisualController()
-    await vc.publish (App, {}, containerId)
-
-    const updates = vc.getApp (containerId)
-    expect (updates).toBeDefined ()
-    expect (typeof updates).toBe ('object')
-    expect (typeof updates.changeMessage).toBe ('function')
-    expect (typeof updates.increment).toBe ('function')
-    vc.destroy (containerId)
-  })
-
-
-  it ( 'Fail to get non-existent app', () => {
-    const consoleSpy = vi.spyOn (console, 'error').mockImplementation (() => {})
-    const vc = new VisualController ()
-
-    const result = vc.getApp ('non-existent-app')
-
-    expect (consoleSpy).toHaveBeenCalledWith ('App with id: "non-existent-app" was not found.')
-    expect (result).toBe (false)
-  })
-
-
-  it ( 'Fails when Component is undefined', async () => {
-    const consoleSpy = vi.spyOn (console, 'error').mockImplementation (() => {})
-    const vc = new VisualController ()
-
-    const result = vc.publish (undefined, {}, containerId)
-
-    expect (consoleSpy).toHaveBeenCalledWith ('Error: Component is undefined')
-    expect (result).toBe (false)
-  })
-
-
-  it ( 'Fails when container does not exist', async () => {
-    const consoleSpy = vi.spyOn (console, 'error').mockImplementation (() => {})
-    const vc = new VisualController ()
-
-    const result = vc.publish (App, {}, 'non-existent-container')
-
-    expect (consoleSpy).toHaveBeenCalledWith ('Can\'t find node with id: "non-existent-container"')
-    expect (result).toBe (false)
-  })
-
-
-  it ( 'Dependencies', async () => {
-    const testDep = { value: 42 }
-    const vc = new VisualController ({ testDep })
-
-    function TestComponent (props) {
-      if (props.setupUpdates) {
-        props.setupUpdates ({ getTestDep: () => props.dependencies.testDep })
-      }
-      return h('div', null, 'Test')
+const tick = () => new Promise(resolve => setTimeout(resolve, 0))
+const resetAll = () => {
+    document.body.innerHTML = '<main id="main"></main>'
+    let main = document.querySelector('#main')
+    if (!main) {
+        main = document.createElement('main')
+        main.id = 'main'
+        document.body.appendChild(main)
     }
-
-    await vc.publish (TestComponent, {}, containerId)
-    const result = vc.getApp (containerId).getTestDep ()
-    expect (result).toEqual ({ value: 42 })
-    vc.destroy (containerId)
-  })
+    main.innerHTML = ''
+}
 
 
-  it ( 'Supports SSR/hydrate', async () => {
-    const node = document.getElementById (containerId)
-    node.innerHTML = '<div><h1>Server Rendered</h1></div>'
+describe('Visual Controller for Preact — v3 region API', () => {
 
-    const vc = new VisualController ()
-    await vc.publish (App, {}, containerId)
+    let html
 
-    const button = node.querySelector ('button')
-    expect(button).not.toBeNull ()
-    vc.destroy (containerId)
-  })
+    beforeEach(() => {
+        resetAll()
+        html = new VisualController({})
+    })
 
+    it('set registers a region and adds the alias to list()', () => {
+        html.set(({ start, end }) => {
+            document.querySelector('#main').append(start, end)
+            return 'header'
+        })
+        expect(html.list()).toContain('header')
+    })
+
+    it('publish mounts an app into a declared alias', async () => {
+        html.set(({ start, end }) => {
+            document.querySelector('#main').append(start, end)
+            return 'header'
+        })
+        await html.publish('header', App)
+        expect(html.has('header')).toBe(true)
+    })
+
+    it('publish into undeclared alias resolves to false and logs', async () => {
+        const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const result = await html.publish('nope', App)
+        expect(result).toBe(false)
+        expect(errSpy).toHaveBeenCalled()
+        errSpy.mockRestore()
+    })
+
+    it('publish with no component resolves to false and logs', async () => {
+        html.set(({ start, end }) => {
+            document.querySelector('#main').append(start, end)
+            return 'header'
+        })
+        const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const result = await html.publish('header', undefined)
+        expect(result).toBe(false)
+        errSpy.mockRestore()
+    })
+
+    it('republish destroys the first app and mounts the second', async () => {
+        html.set(({ start, end }) => {
+            document.querySelector('#main').append(start, end)
+            return 'header'
+        })
+        await html.publish('header', App)
+        const app1 = html.getApp('header')
+        await html.publish('header', App)
+        const app2 = html.getApp('header')
+        expect(app1).not.toBe(app2)
+        expect(html.has('header')).toBe(true)
+    })
+
+    it('destroy empties the range, has() becomes false, alias stays in list()', async () => {
+        html.set(({ start, end }) => {
+            document.querySelector('#main').append(start, end)
+            return 'header'
+        })
+        await html.publish('header', App)
+        expect(html.has('header')).toBe(true)
+        expect(html.destroy('header')).toBe(true)
+        expect(html.has('header')).toBe(false)
+        expect(html.list()).toContain('header')
+    })
+
+    it('destroy on an unknown alias returns false', () => {
+        expect(html.destroy('never-published')).toBe(false)
+    })
+
+    it('getApp returns the setupUpdates interface', async () => {
+        html.set(({ start, end }) => {
+            document.querySelector('#main').append(start, end)
+            return 'header'
+        })
+        await html.publish('header', App)
+        const app = html.getApp('header')
+        expect(typeof app).toBe('object')
+    })
+
+    it('getApp on missing alias returns false and logs', () => {
+        const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        expect(html.getApp('never')).toBe(false)
+        expect(errSpy).toHaveBeenCalled()
+        errSpy.mockRestore()
+    })
+
+    it('supports multiple regions in the same parent', async () => {
+        const main = document.querySelector('#main')
+        html.set(({ start, end }) => { main.append(start, end); return 'header' })
+        html.set(({ start, end }) => { main.append(start, end); return 'sidebar' })
+        expect(html.list()).toEqual(expect.arrayContaining(['header', 'sidebar']))
+        await html.publish('header', App)
+        await html.publish('sidebar', App)
+        expect(html.has('header')).toBe(true)
+        expect(html.has('sidebar')).toBe(true)
+        const spans = Array.from(main.querySelectorAll('span')).filter(s => s.style.display === 'contents')
+        expect(spans.length).toBe(2)
+    })
+
+    it('orphaned markers (parent removed) make publish resolve to false', async () => {
+        html.set(({ start, end }) => {
+            document.querySelector('#main').append(start, end)
+            return 'header'
+        })
+        document.querySelector('#main').remove()
+        const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const result = await html.publish('header', App)
+        expect(result).toBe(false)
+        errSpy.mockRestore()
+    })
+
+    it('reset unmounts all apps and clears list()', async () => {
+        const main = document.querySelector('#main')
+        html.set(({ start, end }) => { main.append(start, end); return 'header' })
+        html.set(({ start, end }) => { main.append(start, end); return 'sidebar' })
+        await html.publish('header', App)
+        await html.publish('sidebar', App)
+        expect(html.list().length).toBe(2)
+
+        html.reset()
+        expect(html.list().length).toBe(0)
+        expect(html.has('header')).toBe(false)
+        expect(html.has('sidebar')).toBe(false)
+        const remaining = Array.from(main.querySelectorAll('span')).filter(s => s.style.display === 'contents')
+        expect(remaining.length).toBe(0)
+    })
+
+    it('destroy() with no args destroys every published app and returns the count', async () => {
+        const main = document.querySelector('#main')
+        html.set(({ start, end }) => { main.append(start, end); return 'header' })
+        html.set(({ start, end }) => { main.append(start, end); return 'sidebar' })
+        await html.publish('header', App)
+        await html.publish('sidebar', App)
+        const count = html.destroy()
+        expect(count).toBe(2)
+        expect(html.has('header')).toBe(false)
+        expect(html.has('sidebar')).toBe(false)
+    })
+
+    it('isEmpty returns true for an empty region and false after publish', async () => {
+        html.set(({ start, end }) => {
+            document.querySelector('#main').append(start, end)
+            return 'header'
+        })
+        expect(html.isEmpty('header')).toBe(true)
+        await html.publish('header', App)
+        expect(html.isEmpty('header')).toBe(false)
+    })
+
+    it('isEmpty returns undefined and logs for an unknown alias', () => {
+        const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        expect(html.isEmpty('nope')).toBe(undefined)
+        expect(errSpy).toHaveBeenCalled()
+        errSpy.mockRestore()
+    })
 })
