@@ -5,11 +5,18 @@
   "type": "module",
   "main": "./dist/visual-controller-for-preact.cjs",
   "module": "./dist/visual-controller-for-preact.esm.mjs",
-  "types": "./dist/main.d.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/visual-controller-for-preact.esm.mjs",
-      "require": "./dist/visual-controller-for-preact.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/visual-controller-for-preact.esm.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/visual-controller-for-preact.cjs"
+      },
+      "default": "./dist/visual-controller-for-preact.esm.mjs"
     }
   },
   "files": [
@@ -19,7 +26,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && npm run types",
-    "types": "tsc -p tsconfig.types.json",
+    "types": "tsc -p tsconfig.types.json && node scripts/generate-cjs-types.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:ui": "vitest --ui",
