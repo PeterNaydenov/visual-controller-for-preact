@@ -19,5 +19,8 @@
     "allowJs": true,
     "checkJs": false
   },
-  "include": ["src/main.js"]
+  "include": [
+    "src/main.js",
+    "src/index.ts"
+  ]
 }
