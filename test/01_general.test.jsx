@@ -1,13 +1,13 @@
+// vitest's `jsdom` environment already provides `document`, `window` and
+// `navigator`. Creating a second JSDOM instance and assigning it to
+// `global.document` throws on jsdom 30 (`Cannot set property document of
+// [object Window] which has only a getter`) — the jsdom globals are
+// getter-only accessors. The DOM is rebuilt in `beforeEach` anyway.
+
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { h } from 'preact'
-import { JSDOM } from 'jsdom'
 import VisualController from '../src/main.js'
 import App from './App.jsx'
-
-const dom = new JSDOM('<!DOCTYPE html><html><body><main id="main"></main></body></html>')
-global.document = dom.window.document
-global.window = dom.window
-global.navigator = dom.window.navigator
 
 
 const tick = () => new Promise(resolve => setTimeout(resolve, 0))
