@@ -13,7 +13,7 @@ function i() {
 		s.setStartAfter(i), s.setEndBefore(a);
 		let c = {
 			isEmpty() {
-				return !i.isConnected || !a.isConnected ? !0 : (s.setStartAfter(i), s.setEndBefore(a), s.collapsed);
+				return !i.isConnected || !a.isConnected || (s.setStartAfter(i), s.setEndBefore(a), s.collapsed);
 			},
 			getContext() {
 				return i.isConnected && a.isConnected ? s.commonAncestorContainer : null;
